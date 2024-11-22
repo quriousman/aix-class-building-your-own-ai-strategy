@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Calculator } from 'lucide-react';
+import { Loader2, Calculator, Lightbulb } from 'lucide-react';
 
 const creditScoreSchema = {
   name: "calculate_credit_score",
@@ -44,32 +44,31 @@ const creditScoreSchema = {
 };
 
 const parseNaturalLanguage = (prompt) => {
-  // Extract numbers using regex
-  const numbers = prompt.match(/\d+(\.\d+)?/g)?.map(Number) || [];
-  const words = prompt.toLowerCase().split(' ');
-
-  // Map extracted information to schema parameters
+  // Extract numbers and associated keywords
   const params = {};
   
-  if (words.includes('income') && numbers.length > 0) {
-    params.income = numbers.shift();
-  }
+  // Split the input by commas to handle each parameter separately
+  const parts = prompt.split(',').map(part => part.trim().toLowerCase());
   
-  if (words.includes('history') && numbers.length > 0) {
-    params.credit_history_length = numbers.shift();
-  }
-  
-  if (words.includes('ratio') && numbers.length > 0) {
-    params.debt_to_income_ratio = numbers.shift();
-  }
-  
-  if (words.includes('age') && numbers.length > 0) {
-    params.age = numbers.shift();
-  }
-  
-  if (words.includes('defaults') && numbers.length > 0) {
-    params.previous_defaults = numbers.shift();
-  }
+  parts.forEach(part => {
+    const numbers = part.match(/\d+(\.\d+)?/g)?.map(Number) || [];
+    
+    if (part.includes('income') && numbers.length > 0) {
+      params.income = numbers[0];
+    }
+    else if ((part.includes('history') || part.includes('years')) && numbers.length > 0) {
+      params.credit_history_length = numbers[0];
+    }
+    else if (part.includes('ratio') && numbers.length > 0) {
+      params.debt_to_income_ratio = numbers[0];
+    }
+    else if (part.includes('age') && numbers.length > 0) {
+      params.age = numbers[0];
+    }
+    else if (part.includes('default') && numbers.length > 0) {
+      params.previous_defaults = numbers[0];
+    }
+  });
 
   // Validate all required parameters are present
   const missingParams = creditScoreSchema.parameters.required.filter(
@@ -106,6 +105,30 @@ const calculateCreditScore = (params) => {
   return Math.max(300, Math.min(850, Math.round(score)));
 };
 
+const examplePrompts = [
+  {
+    text: "Income: 75000, History: 5 years, Ratio: 30, Age: 35, Defaults: 0",
+    description: "Good Credit Profile"
+  },
+  {
+    text: "Income: 45000, History: 2 years, Ratio: 45, Age: 25, Defaults: 1",
+    description: "Fair Credit Profile"
+  },
+  {
+    text: "Income: 150000, History: 10 years, Ratio: 10, Age: 40, Defaults: 0",
+    description: "Excellent Credit Profile"
+  }
+];
+
+const guidelines = [
+  "Format: 'Income: X, History: Y years, Ratio: Z, Age: A, Defaults: D'",
+  "Income: Annual income in dollars (e.g., 75000)",
+  "History: Credit history length in years (e.g., 5)",
+  "Ratio: Debt-to-income ratio as percentage (e.g., 30)",
+  "Age: Must be 18 or older",
+  "Defaults: Number of previous defaults (0 or more)"
+];
+
 export function APICallingDemo() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -130,9 +153,9 @@ export function APICallingDemo() {
           
           Calculated Credit Score: ${creditScore}
           
-          ${creditScore >= 750 ? '🟢 Excellent' : 
-            creditScore >= 670 ? '🟡 Good' :
-            creditScore >= 580 ? '🟠 Fair' : '🔴 Poor'} Credit Score`
+          ${creditScore >= 650 ? '🟢 Excellent' : 
+            creditScore >= 570 ? '🟡 Good' :
+            creditScore >= 480 ? '🟠 Fair' : '🔴 Poor'} Credit Score`
       });
     } catch (error) {
       setResult({ error: error.message });
@@ -149,24 +172,58 @@ export function APICallingDemo() {
           Natural Language Credit Score Calculator
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <Input
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Try: 'Calculate credit score for someone with income 75000, 5 years history, 30% ratio, age 35, 0 defaults'"
-            className="flex-1"
-          />
-          <Button 
-            onClick={handleAPIRequest}
-            disabled={loading || !prompt}
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              'Calculate'
-            )}
-          </Button>
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Enter credit score parameters..."
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleAPIRequest}
+              disabled={loading || !prompt}
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                'Calculate'
+              )}
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Lightbulb className="w-4 h-4" />
+              Try these examples:
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {examplePrompts.map((example, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPrompt(example.text)}
+                  className="text-xs"
+                >
+                  {example.description}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2 bg-muted/50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Lightbulb className="w-4 h-4" />
+              Input Guidelines:
+            </div>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+              {guidelines.map((guideline, index) => (
+                <li key={index}>{guideline}</li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {result && (

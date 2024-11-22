@@ -24,7 +24,7 @@ const features = [
         <path d="M14 2v10l-3-1.5L8 12V2" />
       </svg>
     ),
-    href: '/ai-features/rag',
+    href: '/ai-features/rag/document-qa',
     items: [
       'Document Q&A - Ask questions about your documents',
       'Knowledge Base - Build and query your custom knowledge base'
